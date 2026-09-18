@@ -6,7 +6,7 @@
 /*   By: yorimek <yorimek@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/16 15:02:12 by yorimek           #+#    #+#             */
-/*   Updated: 2026/09/17 11:53:38 by yorimek          ###   ########.fr       */
+/*   Updated: 2026/09/18 15:02:43 by yorimek          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,8 @@
 #include <iomanip>
 
 /*-----------Check data.csv---------*/
-void	ft_check_data(std::map<std::string, double> &map_data);
+void	ft_process_data(std::map<std::string, double> &map_data);
+void	ft_process_input(char *argv, std::map<std::string, double> &map_data);
 
 /*-----------Exception---------*/
 class BtcException: public std::exception

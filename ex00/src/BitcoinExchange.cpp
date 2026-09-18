@@ -6,7 +6,7 @@
 /*   By: yorimek <yorimek@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/16 15:33:55 by yorimek           #+#    #+#             */
-/*   Updated: 2026/09/17 15:24:32 by yorimek          ###   ########.fr       */
+/*   Updated: 2026/09/18 17:21:17 by yorimek          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,22 +101,22 @@ static void	ft_check_value(std::string val, size_t line_n)
 		if ((!isdigit(val[i]) && val[i] != '.') || nb_point > 1)
 		{
 			std::cout << "Error line " << line_n << " ==> ";
-			throw BtcException("The exchange rate must be composed by number and maximum one \".\"");
+			throw BtcException("Invalid format: must be an integer or a floating-point number.");
 		}
 		i++;
 	}
 	if (val[i - 1] == '.' || val[0] == '.')
 	{
 		std::cout << "Error line " << line_n << " ==> ";
-		throw BtcException("The exchange rate can't have a \".\" at the begining or at the end");
+		throw BtcException("Invalid format: must be an integer or a floating-point number.");
 	}	
 }
 
-static void	ft_check_line(std::string line, size_t line_n, std::map<std::string, double> &map_data)
+static void	ft_check_line_data(std::string line, size_t line_n, std::map<std::string, double> &map_data)
 {
 	if (line_n == 1)
 	{
-		if (line.compare("date,exchange_rate"))
+		if (line != "date,exchange_rate")
 			throw BtcException("First line of data.csv must be: \"date,exchange_rate\"");
 		return ;
 	}
@@ -138,7 +138,127 @@ static void	ft_check_line(std::string line, size_t line_n, std::map<std::string,
 	return ;
 }
 
-void	ft_check_data(std::map<std::string, double> &map_data)
+static void	ft_check_input_value(std::string val, size_t line_n)
+{
+	size_t	nb_p = 0;
+	size_t	i = 0;
+
+	if (val.empty())
+	{
+		std::cout << "Error line " << line_n << " ==> ";
+		throw BtcException("Must contain a value");
+	}
+	while (val[i])
+	{
+		if (val[i] == '.')
+			nb_p++;
+		if ((!isdigit(val[i]) && val[i] != '-' && val[i] != '.') || nb_p > 1)
+		{
+			std::cout << "Error line " << line_n << " ==> ";
+			throw BtcException("Invalid format: must be an integer or a floating-point number.");
+		}
+		i++;
+	}
+	if (val[i - 1] == '.' || val[0] == '.')
+	{
+		std::cout << "Error line " << line_n << " ==> ";
+		throw BtcException("Invalid format: must be an integer or a floating-point number.");
+	}
+}
+
+static double	ft_str_to_double(std::string val, size_t line_n)
+{
+	char	*end;
+	double	d_val = strtod(val.c_str(), &end);
+
+	if (d_val < 0 )
+	{
+		std::cout << "Error line " << line_n << " ==> ";
+		throw BtcException("Not a positive value");
+	}
+	else if (d_val > 1000)
+	{
+		std::cout << "Error line " << line_n << " ==> ";
+		throw BtcException("Value too large. Must be <1000");
+	}
+	return (d_val);
+}
+
+static void	ft_print_result(std::string date, double val, size_t line_n, std::map<std::string, double> &map_data)
+{
+	if (date < map_data.begin()->first)
+	{
+		std::cout << "Error line " << line_n << " ==> ";
+		throw BtcException("Date must be >= 2009-01-02");
+	}
+	std::map<std::string, double>::const_iterator it = map_data.begin();
+	it = map_data.lower_bound(date);
+	if (it == map_data.end())
+	{
+		it--;
+		std::cout << date << " => " << val << " = " << val * it->second << std::endl;
+	}
+	else
+	{
+		if (it->first == date)
+			std::cout << date << " => " << val << " = " << val * it->second << std::endl;
+		else
+		{
+			it--;
+			std::cout << date << " => " << val << " = " << val * it->second << std::endl;
+		}
+	}
+}
+
+static void	ft_check_line_input(std::string line, size_t line_n, std::map<std::string, double> &map_data)
+{
+	size_t pos = line.find(" | ");
+	if (pos == 10)
+	{
+		std::string	date = line.substr(0, pos);
+		std::string val = line.substr(pos + 3);
+		ft_check_date(date, line_n);
+		ft_check_input_value(val, line_n);
+		double	d_val = ft_str_to_double(val, line_n);
+		ft_print_result(date, d_val, line_n, map_data);
+	}
+	else
+	{
+		std::cout << "Error line " << line_n << " ==> ";
+		throw BtcException("Invalid input. It must be: <YYYY-MM-DD | value>");
+	}
+}
+
+void	ft_process_input(char *argv, std::map<std::string, double> &map_data)
+{
+	std::ifstream	file(argv);
+	size_t			line_n = 2;
+
+	if (!file.is_open())
+		throw BtcException("Error: could not open file.");
+	std::string line;
+	if (getline(file, line))
+		if (line != "date | value")
+			throw BtcException("First line of input file must be: \"date | value\"");	
+	while (getline(file, line))
+	{
+		try
+		{
+			ft_check_line_input(line, line_n, map_data);
+		}
+		catch(const std::exception& e)
+		{
+			std::cerr << "in " << argv << " => " << e.what() << '\n';
+			line_n++;
+			continue;
+		}
+		line_n++;
+	}
+	file.close();
+	return ;
+}
+
+void	ft_process_data(std::map<std::string, double> &map_data)
 {
 	std::ifstream data("data.csv");
 	size_t	line_n = 1;
@@ -148,7 +268,7 @@ void	ft_check_data(std::map<std::string, double> &map_data)
 		std::string	line;
 		while (std::getline(data, line))
 		{
-			ft_check_line(line, line_n, map_data);
+			ft_check_line_data(line, line_n, map_data);
 			line_n++;
 		}
 	}
